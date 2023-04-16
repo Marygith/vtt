@@ -2,18 +2,15 @@ package com.diploma.vtt.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 
 @Entity
-public class TextEntity {
+public class Doc {
 
     @Id
     private Integer id;
 
-    public TextEntity() {
+    public Doc() {
 
     }
 
@@ -55,7 +52,7 @@ public class TextEntity {
 
     private String author;
 
-    public TextEntity(Integer id, String body, String title, String author) {
+    public Doc(Integer id, String body, String title, String author) {
         this.id = id;
         this.body = body;
         this.title = title;

@@ -1,8 +1,9 @@
 package com.diploma.vtt.controller;
 
-import com.diploma.vtt.model.TextEntity;
+import com.diploma.vtt.model.Doc;
 import com.diploma.vtt.model.VideoEntity;
 import com.diploma.vtt.repository.VideoRepository;
+import com.diploma.vtt.service.ProcessTextService;
 import com.diploma.vtt.service.ProcessVideoService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -10,9 +11,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.DataFormatException;
@@ -25,23 +26,58 @@ import java.util.zip.Inflater;
 public class MediaController {
 
     private final ProcessVideoService processVideoService;
+
+    private final ProcessTextService processTextService;
     private final VideoRepository videoRepository;
 
-    TextEntity textEntity = new TextEntity(1, "there is some text to display", "test", "me");
+    private SseEmitter sseEmitter = new SseEmitter();
 
-    public MediaController(ProcessVideoService processVideoService, VideoRepository videoRepository) {
+    Doc textEntity = new Doc(1, "there is some text to display", "test", "me");
+
+    public MediaController(ProcessVideoService processVideoService, ProcessTextService processTextService, VideoRepository videoRepository) {
         this.processVideoService = processVideoService;
+        this.processTextService = processTextService;
         this.videoRepository = videoRepository;
     }
 
-    @GetMapping("/media")
+/*    @GetMapping(path = "/stream-flux", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamFlux() {
+
+        return Flux.interval(Duration.ofSeconds(1)).map(s -> "Flux - " + LocalTime.now().toString());
+    }*/
+
+    @GetMapping("/events")
+    public SseEmitter getEvents() {
+        sseEmitter = new SseEmitter();
+        // create and send events
+//        for (int i = 0; i < 10; i++) {
+            try {
+                sseEmitter.send(SseEmitter.event().name("message").data(ProcessTextService.getText()));
+                sseEmitter.complete();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+//        }
+//        sseEmitter.complete(); // close the emitter when done sending events
+        return sseEmitter;
+    }
+/*    @GetMapping("/media")
     public TextEntity getText() {
-        return textEntity;
+
+        processTextService.divideTextOnParagraphs("C:\\\\Users\\\\maria\\\\Desktop\\\\new_markina_trans.txt");
+        return new TextEntity(1, ProcessTextService.getText(), "new title", "still me");
+    }*/
+
+    @GetMapping("/media")
+    public Doc getText() {
+
+        sendEvent();
+//        processTextService.divideTextOnParagraphs("C:\\\\Users\\\\maria\\\\Desktop\\\\new_markina_trans.txt");
+        return new Doc(1, ProcessTextService.getText(), "new title", "still me");
     }
 
-
     @PostMapping(value = "/media", consumes = /*MediaType.APPLICATION_FORM_URLENCODED_VALUE*/MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TextEntity> saveText(@RequestBody TextEntity entity) {
+    public ResponseEntity<Doc> saveText(@RequestBody Doc entity) {
         System.out.println(entity.getBody());
         System.out.println(entity.getId());
        return new ResponseEntity<>(entity, HttpStatus.ACCEPTED);
@@ -64,6 +100,7 @@ public class MediaController {
     }
 
     public static byte[] compressBytes(byte[] data) {
+        System.out.println(data.length);
         Deflater deflater = new Deflater();
         deflater.setInput(data);
         deflater.finish();
@@ -74,6 +111,7 @@ public class MediaController {
             outputStream.write(buffer, 0, count);
         }
         try {
+            System.out.println(outputStream.toByteArray().length);
             outputStream.close();
         } catch (IOException e) {
         }
@@ -95,6 +133,19 @@ public class MediaController {
         } catch (IOException | DataFormatException ioe) {
         }
         return outputStream.toByteArray();
+    }
+
+    public  void sendEvent() {
+//        try {
+
+            ProcessTextService.setText("something new");
+           /* sseEmitter = new SseEmitter();
+            sseEmitter.send(SseEmitter.event().name("message").data("done"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        sseEmitter.complete();
+        return sseEmitter;*/
     }
 
 }
